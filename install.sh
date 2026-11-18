@@ -12,10 +12,10 @@ swift build -c release
 
 mkdir -p "$INSTALL_DIR" 2>/dev/null || sudo mkdir -p "$INSTALL_DIR"
 if [ -w "$INSTALL_DIR" ]; then
-    cp .build/release/fm-code "$INSTALL_DIR/fm-code"
+    install -m 755 .build/release/fm-code "$INSTALL_DIR/fm-code"
 else
     echo "Installing to $INSTALL_DIR needs sudo."
-    sudo cp .build/release/fm-code "$INSTALL_DIR/fm-code"
+    sudo install -m 755 .build/release/fm-code "$INSTALL_DIR/fm-code"
 fi
 echo "Installed $INSTALL_DIR/fm-code"
 
