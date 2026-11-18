@@ -6,7 +6,7 @@ import Testing
     #expect(ReadOnlyGitCommand.diff.args == ["diff", "--staged"])
     #expect(ReadOnlyGitCommand.diffStat.args == ["diff", "--staged", "--stat"])
     #expect(ReadOnlyGitCommand.status.args == ["status", "--short"])
-    #expect(ReadOnlyGitCommand.log.args == ["log", "--oneline", "-n", "10"])
+    #expect(ReadOnlyGitCommand.log.args == ["log", "--oneline", "-n", "15"])
 }
 
 @Test func stagedDiffVisible() throws {

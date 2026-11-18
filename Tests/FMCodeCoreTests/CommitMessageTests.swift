@@ -1,38 +1,29 @@
 import Testing
 @testable import FMCodeCore
 
-@Test func rendersScopeAndBreaking() {
-    #expect(render(.init(type: .feat, scope: "auth", subject: "add refresh", breaking: true)) == "feat(auth)!: add refresh")
-}
-
-@Test func omitsBlankScope() {
-    #expect(render(.init(type: .fix, scope: " ", subject: "x", breaking: false)) == "fix: x")
+@Test func rendersBreakingWithoutScope() {
+    #expect(render(.init(type: .feat, subject: "add refresh", breaking: true)) == "feat!: add refresh")
+    #expect(render(.init(type: .fix, subject: "x", breaking: false)) == "fix: x")
 }
 
 @Test func sanitizesSubject() {
-    #expect(render(.init(type: .docs, scope: nil, subject: "Update README.\nmore", breaking: false)) == "docs: update README")
+    #expect(render(.init(type: .docs, subject: "Update README.\nmore", breaking: false)) == "docs: update README")
 }
 
 @Test func sanitizesWhitespace() {
-    #expect(render(.init(type: .fix, scope: nil, subject: "  fix   the\tbug  ", breaking: false)) == "fix: fix the bug")
+    #expect(render(.init(type: .fix, subject: "  fix   the\tbug  ", breaking: false)) == "fix: fix the bug")
 }
 
-@Test func fitDropsScopeThenTrims() {
+@Test func fitTrims() {
     let long = String(repeating: "word ", count: 20)
-    let s = fit(.init(type: .refactor, scope: "verylongscope", subject: long, breaking: false))
+    let s = fit(.init(type: .refactor, subject: long, breaking: false))
     #expect(s.count <= 72)
     #expect(s.hasPrefix("refactor: "))
     #expect(!s.hasSuffix(" "))
 }
 
-@Test func fitDropsScopeWhenThatSuffices() {
-    let subject = String(repeating: "a", count: 60)
-    let s = fit(.init(type: .feat, scope: "something", subject: subject, breaking: false))
-    #expect(s == "feat: " + subject)
-}
-
 @Test func fitKeepsShortMessage() {
-    #expect(fit(.init(type: .chore, scope: "deps", subject: "bump x", breaking: false)) == "chore(deps): bump x")
+    #expect(fit(.init(type: .chore, subject: "bump x", breaking: false)) == "chore: bump x")
 }
 
 @Test func allElevenTypes() {
@@ -40,16 +31,16 @@ import Testing
 }
 
 @Test func keepsLeadingAcronym() {
-    #expect(render(.init(type: .docs, scope: nil, subject: "README updates", breaking: false)) == "docs: README updates")
-    #expect(render(.init(type: .feat, scope: nil, subject: "API client retries", breaking: false)) == "feat: API client retries")
-    #expect(render(.init(type: .feat, scope: nil, subject: "Add parser", breaking: false)) == "feat: add parser")
+    #expect(render(.init(type: .docs, subject: "README updates", breaking: false)) == "docs: README updates")
+    #expect(render(.init(type: .feat, subject: "API client retries", breaking: false)) == "feat: API client retries")
+    #expect(render(.init(type: .feat, subject: "Add parser", breaking: false)) == "feat: add parser")
 }
 
 @Test func stripsRepeatedTypePrefix() {
-    #expect(render(.init(type: .feat, scope: nil, subject: "feat: add parser", breaking: false)) == "feat: add parser")
-    #expect(render(.init(type: .fix, scope: "ui", subject: "Fix(ui)!: handle nil", breaking: false)) == "fix(ui): handle nil")
+    #expect(render(.init(type: .feat, subject: "feat: add parser", breaking: false)) == "feat: add parser")
+    #expect(render(.init(type: .fix, subject: "Fix(ui)!: handle nil", breaking: false)) == "fix: handle nil")
 }
 
 @Test func skipsBlankFirstLine() {
-    #expect(render(.init(type: .feat, scope: nil, subject: "   \nadd y", breaking: false)) == "feat: add y")
+    #expect(render(.init(type: .feat, subject: "   \nadd y", breaking: false)) == "feat: add y")
 }

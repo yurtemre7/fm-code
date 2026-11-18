@@ -7,13 +7,11 @@ public enum CommitType: String, CaseIterable, Sendable {
 
 public struct CommitDraft: Sendable, Equatable {
     public var type: CommitType
-    public var scope: String?
     public var subject: String
     public var breaking: Bool
 
-    public init(type: CommitType, scope: String?, subject: String, breaking: Bool) {
+    public init(type: CommitType, subject: String, breaking: Bool) {
         self.type = type
-        self.scope = scope
         self.subject = subject
         self.breaking = breaking
     }
@@ -39,26 +37,20 @@ func cleanSubject(_ raw: String) -> String {
     return first.lowercased() + s.dropFirst()
 }
 
-func cleanScope(_ raw: String?) -> String? {
-    guard let raw else { return nil }
-    let s = collapse(Substring(raw)).replacingOccurrences(of: " ", with: "-")
-    return s.isEmpty ? nil : s
-}
-
-private func header(_ d: CommitDraft, scope: String?) -> String {
-    "\(d.type.rawValue)\(scope.map { "(\($0))" } ?? "")\(d.breaking ? "!" : ""): "
+/// `type: subject` — never `type(scope): subject`.
+private func header(_ d: CommitDraft) -> String {
+    "\(d.type.rawValue)\(d.breaking ? "!" : ""): "
 }
 
 public func render(_ d: CommitDraft) -> String {
-    header(d, scope: cleanScope(d.scope)) + cleanSubject(d.subject)
+    header(d) + cleanSubject(d.subject)
 }
 
 public func fit(_ d: CommitDraft, maxLength: Int = 72) -> String {
     let full = render(d)
     if full.count <= maxLength { return full }
-    let head = header(d, scope: nil)
+    let head = header(d)
     let subject = cleanSubject(d.subject)
-    if head.count + subject.count <= maxLength { return head + subject }
 
     let budget = max(0, maxLength - head.count)
     var cut = String(subject.prefix(budget))

@@ -8,7 +8,7 @@ struct GitTool: Tool {
     let description = """
         Run a read-only git command in the repository. \
         diffStat: changed files summary. diff: full staged diff. \
-        status: short status. log: last 10 commit subjects (for style).
+        status: short status. log: last 15 commit subjects (for style).
         """
 
     @Generable

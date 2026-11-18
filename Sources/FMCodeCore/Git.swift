@@ -70,7 +70,7 @@ public enum ReadOnlyGitCommand: String, CaseIterable, Sendable {
         case .diff: ["diff", "--staged"]
         case .diffStat: ["diff", "--staged", "--stat"]
         case .status: ["status", "--short"]
-        case .log: ["log", "--oneline", "-n", "10"]
+        case .log: ["log", "--oneline", "-n", "15"]
         }
     }
 }

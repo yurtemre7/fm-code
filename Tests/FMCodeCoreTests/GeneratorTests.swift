@@ -7,7 +7,7 @@ struct Unexpected: Error {}
 @Test func finalizeUsesFirstWhenShort() async throws {
     var retried = false
     let r = try await finalize(
-        draft: { .init(type: .fix, scope: nil, subject: "ok", breaking: false) },
+        draft: { .init(type: .fix, subject: "ok", breaking: false) },
         retry: { _ in retried = true; throw Unexpected() })
     #expect(r == "fix: ok")
     #expect(!retried)
@@ -18,8 +18,8 @@ struct Unexpected: Error {}
     var reportedLength = 0
     let long = String(repeating: "a ", count: 50)
     let r = try await finalize(
-        draft: { .init(type: .feat, scope: "x", subject: long, breaking: false) },
-        retry: { n in calls += 1; reportedLength = n; return .init(type: .feat, scope: "x", subject: long, breaking: false) })
+        draft: { .init(type: .feat, subject: long, breaking: false) },
+        retry: { n in calls += 1; reportedLength = n; return .init(type: .feat, subject: long, breaking: false) })
     #expect(calls == 1)
     #expect(reportedLength > 72)
     #expect(r.count <= 72)
@@ -28,18 +28,18 @@ struct Unexpected: Error {}
 @Test func finalizeUsesShorterRetry() async throws {
     let long = String(repeating: "a ", count: 50)
     let r = try await finalize(
-        draft: { .init(type: .feat, scope: nil, subject: long, breaking: false) },
-        retry: { _ in .init(type: .feat, scope: "ui", subject: "short one", breaking: false) })
-    #expect(r == "feat(ui): short one")
+        draft: { .init(type: .feat, subject: long, breaking: false) },
+        retry: { _ in .init(type: .feat, subject: "short one", breaking: false) })
+    #expect(r == "feat: short one")
 }
 
 @Test func unknownTypeMapsToChore() {
-    let m = CommitMessage(type: "wat", scope: "core", subject: "do it", breaking: false)
-    #expect(m.draft == CommitDraft(type: .chore, scope: "core", subject: "do it", breaking: false))
+    let m = CommitMessage(type: "wat", subject: "do it", breaking: false)
+    #expect(m.draft == CommitDraft(type: .chore, subject: "do it", breaking: false))
 }
 
 @Test func knownTypeMaps() {
-    #expect(CommitMessage(type: "perf", scope: nil, subject: "s", breaking: true).draft.type == .perf)
+    #expect(CommitMessage(type: "perf", subject: "s", breaking: true).draft.type == .perf)
 }
 
 @Test func gitToolRefusesUnknownCommand() async throws {
@@ -72,15 +72,15 @@ struct Unexpected: Error {}
 
 @Test func finalizeRetriesEmptySubject() async throws {
     let r = try await finalize(
-        draft: { .init(type: .feat, scope: nil, subject: "  ", breaking: false) },
-        retry: { _ in .init(type: .feat, scope: nil, subject: "add y", breaking: false) })
+        draft: { .init(type: .feat, subject: "  ", breaking: false) },
+        retry: { _ in .init(type: .feat, subject: "add y", breaking: false) })
     #expect(r == "feat: add y")
 }
 
 @Test func finalizeKeepsFirstDraftWhenRetryFails() async throws {
     let long = String(repeating: "word ", count: 20)
     let r = try await finalize(
-        draft: { .init(type: .feat, scope: nil, subject: long, breaking: false) },
+        draft: { .init(type: .feat, subject: long, breaking: false) },
         retry: { _ in throw Unexpected() })
     #expect(r.hasPrefix("feat: word"))
     #expect(r.count <= 72)

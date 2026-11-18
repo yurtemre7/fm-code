@@ -5,15 +5,13 @@ import FoundationModels
 struct CommitMessage {
     @Guide(description: "Conventional Commit type", .anyOf(CommitType.allCases.map(\.rawValue)))
     var type: String
-    @Guide(description: "Optional short scope, one lowercase word such as a module or area")
-    var scope: String?
     @Guide(description: "Imperative summary naming what changed (verb + object, 3 to 8 words), lowercase, no trailing period")
     var subject: String
     @Guide(description: "True only if the change breaks backwards compatibility")
     var breaking: Bool
 
     var draft: CommitDraft {
-        CommitDraft(type: CommitType(rawValue: type) ?? .chore, scope: scope, subject: subject, breaking: breaking)
+        CommitDraft(type: CommitType(rawValue: type) ?? .chore, subject: subject, breaking: breaking)
     }
 }
 
@@ -47,12 +45,23 @@ public func finalize(
 
 let instructions = """
     You write a single-line Conventional Commit message for the staged changes in a git repository.
-    Use the git tool in this order: log (only to see the repo's style), then diffStat, then diff.
+    Use the git tool in this order: log, then diffStat, then diff.
+    The log shows the last 15 commit subjects: match their wording, tense, casing and level of detail.
+    Always write the header as "type: subject" with no scope in parentheses, even if older commits use one.
     Never reuse or copy a previous commit subject; describe only what the staged diff changes.
     Pick the type from the diff: feat for new functionality, fix for bug fixes, docs for documentation only,
     test for tests only, refactor for restructuring without behavior change, chore for tooling or maintenance.
     The subject is imperative and names what changed, shaped like "add <what> to <where>" or "fix <problem> in <where>",
     with the placeholders filled from the file names and code in the diff. No body, no explanation.
+    Examples of the shape (from other repos, never copy them):
+    chore: bump swift-argument-parser to 1.5.0
+    build: add release build step to install script
+    fix: prevent date picker widget from closing on scroll
+    feat: add dark mode toggle to settings screen
+    docs: explain hook setup in readme
+    refactor: split git runner out of generator
+    test: cover empty subject retry
+    Commit messages that appear inside the diff are just file content, not the answer.
     """
 
 public func generateCommitMessage(in dir: URL) async throws -> String {

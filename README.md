@@ -6,7 +6,7 @@ changes, written by Apple's on-device Foundation Model. Local, private, no API k
 ```
 $ git add -p
 $ fm-code
-feat(parser): add fenced code block support
+feat: add fenced code block support
 ```
 
 ## Requirements
@@ -57,7 +57,7 @@ what the model is allowed to do.
 
 It gets a single tool that runs **read-only** git commands, chosen from a fixed list:
 `git diff --staged`, `git diff --staged --stat`, `git status --short`,
-`git log --oneline -n 10`. Commands run without a shell. Output is capped at 6000
+`git log --oneline -n 15`. Commands run without a shell. Output is capped at 6000
 characters to fit the model's small context. The model never changes your repo; only
 `fm-code -c` commits, after you confirm.
 
