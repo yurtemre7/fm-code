@@ -46,13 +46,22 @@ public func update(
     return .updated(from: previous, to: head)
 }
 
-/// Runs `src/install.sh` with the terminal attached (it may ask for sudo), installing into `dir`.
+/// Runs `src/install.sh` with the terminal attached, installing into `dir`.
+/// Uses posix_spawn, not Process: Process puts the child in its own process group, which
+/// keeps it out of the terminal's foreground group, so `sudo` can't hide the password it reads.
 public func runInstallScript(in src: URL, to dir: URL) throws {
-    let p = Process()
-    p.executableURL = URL(fileURLWithPath: "/bin/sh")
-    p.arguments = [src.appending(path: "install.sh").path]
-    p.environment = ProcessInfo.processInfo.environment.merging(["INSTALL_DIR": dir.path]) { $1 }
-    try p.run()
-    p.waitUntilExit()
-    guard p.terminationStatus == 0 else { throw UpdateError.installFailed(p.terminationStatus) }
+    let args = ["/bin/sh", src.appending(path: "install.sh").path]
+    let env = ProcessInfo.processInfo.environment.merging(["INSTALL_DIR": dir.path]) { $1 }.map { "\($0)=\($1)" }
+    let argv = args.map { strdup($0) } + [nil]
+    let envp = env.map { strdup($0) } + [nil]
+    defer { (argv + envp).forEach { free($0) } }
+
+    var pid = pid_t()
+    let err = posix_spawn(&pid, args[0], nil, nil, argv, envp)
+    guard err == 0 else { throw UpdateError.installFailed(Int32(err)) }
+    var status: Int32 = 0
+    while waitpid(pid, &status, 0) == -1 && errno == EINTR {}
+    // Exit code if it exited normally (WEXITSTATUS); 128 + signal if it was killed.
+    let code = status & 0x7f == 0 ? (status >> 8) & 0xff : 128 + status & 0x7f
+    guard code == 0 else { throw UpdateError.installFailed(code) }
 }
