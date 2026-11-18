@@ -53,6 +53,27 @@ on Apple Silicon. Bare and fast: no chat, no config, no network.
 - **Hook mode:** writes `.git/hooks/prepare-commit-msg` that calls `fm-code` only when no
   message source is given (`$2` empty), writing into `$1`. Refuses to overwrite an existing
   hook.
+- **Doctor / onboarding:** `fm-code doctor` prints a flutter-doctor-style checklist so users
+  see what's enabled and what to expect:
+  ```
+  fm-code doctor
+  [✓] macOS 27.2 on Apple Silicon
+  [✓] On-device model available
+  [✓] git 2.50.1 (/usr/bin/git)
+  [✓] rtk 1.2.0 — compact git output enabled        (or [!] not found — optional)
+  [✓] Inside a git repo, 2 files staged              (or [!] not in a repo / nothing staged)
+  [!] prepare-commit-msg hook not installed — run `fm-code --hook`
+
+  What the model can do: read-only `git diff --staged`, `diff --staged --stat`,
+  `status --short`, `log --oneline -n 10`. It never changes your repo; only
+  `fm-code -c` commits, after you confirm.
+
+  No issues found!   (or: 1 issue — fm-code can't run until it's fixed)
+  ```
+  `[✗]` = required (macOS 26+, Apple Silicon, model available, git) → exit 1.
+  `[!]` = optional/informational → exit 0. Model-unavailable shows the reason
+  (device not eligible / Apple Intelligence off / model still downloading) and the fix.
+  `fm-code --help` and every startup error point to `fm-code doctor`.
 - **Install:** `swift build -c release`, copy `.build/release/fm-code` into `PATH`.
 
 ## Left to the builder
