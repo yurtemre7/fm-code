@@ -29,6 +29,18 @@ do {
         print(renderDoctor(results), terminator: "")
         if results.contains(where: { $0.status == .fail }) { exit(1) }
 
+    case .update(let force):
+        let me = Bundle.main.executableURL?.resolvingSymlinksInPath() ?? URL(fileURLWithPath: "/usr/local/bin/fm-code")
+        let dir = me.deletingLastPathComponent()
+        let repo = ProcessInfo.processInfo.environment["FM_CODE_REPO"] ?? defaultRepoURL
+        print("Fetching the latest fm-code from \(repo)...")
+        fflush(stdout)  // before install.sh writes to the same terminal
+        switch try update(cache: updateCache(), repo: repo, target: dir, force: force, install: { try runInstallScript(in: $0, to: dir) }) {
+        case .upToDate(let head): print("Already up to date (\(head)). Use `fm-code update --force` to reinstall anyway.")
+        case .updated(let from, let to) where from == to: print("Reinstalled \(to).")
+        case .updated(let from, let to): print("Updated \(from.map { "\($0) → " } ?? "to ")\(to).")
+        }
+
     case .installHook:
         let me = Bundle.main.executableURL?.resolvingSymlinksInPath().path ?? "fm-code"
         let url = try installHook(in: cwd, fallback: me)

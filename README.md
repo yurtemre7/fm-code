@@ -30,7 +30,9 @@ To install somewhere else:
 INSTALL_DIR=~/.local/bin ./install.sh
 ```
 
-Re-run `./install.sh` after pulling changes to update. To do it by hand:
+Update later with `fm-code update`: it keeps a copy of the source in `~/Library/Caches/fm-code`,
+pulls the latest `main` and re-runs `install.sh` into the folder `fm-code` is installed in.
+From a checkout, re-running `./install.sh` works too. To do it by hand:
 `swift build -c release && cp .build/release/fm-code /usr/local/bin/`.
 
 Open `Package.swift` in Xcode to build, run and debug.
@@ -52,6 +54,7 @@ what the model is allowed to do.
 | `fm-code -c` | Shows the message, then `[y]es / [e]dit / [n]o` before running `git commit` |
 | `fm-code --hook` | Installs a `prepare-commit-msg` hook so plain `git commit` gets the suggestion prefilled |
 | `fm-code doctor` | Setup check |
+| `fm-code update` | Rebuilds and reinstalls the latest version from GitHub (`--force` to reinstall anyway) |
 
 ## What the model can do
 
@@ -65,3 +68,4 @@ characters to fit the model's small context. The model never changes your repo; 
 
 - `FM_CODE_NO_RTK=1` — don't use rtk even if installed
 - `FM_CODE_DEBUG=1` — print the git commands the model runs to stderr
+- `FM_CODE_REPO=<url>` — where `fm-code update` gets the source (default: this repo on GitHub)

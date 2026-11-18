@@ -7,6 +7,8 @@ import Testing
     #expect(Command.parse(["-c"]) == .commit)
     #expect(Command.parse(["--commit"]) == .commit)
     #expect(Command.parse(["--hook"]) == .installHook)
+    #expect(Command.parse(["update"]) == .update(force: false))
+    #expect(Command.parse(["update", "--force"]) == .update(force: true))
     #expect(Command.parse(["-h"]) == .help)
     #expect(Command.parse(["--help"]) == .help)
     #expect(Command.parse(["--wat"]) == nil)

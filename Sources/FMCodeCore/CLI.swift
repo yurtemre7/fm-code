@@ -2,7 +2,7 @@ import Foundation
 import FoundationModels
 
 public enum Command: Equatable, Sendable {
-    case print, commit, installHook, doctor, help
+    case print, commit, installHook, doctor, update(force: Bool), help
 
     public static func parse(_ args: [String]) -> Command? {
         switch args {
@@ -10,6 +10,8 @@ public enum Command: Equatable, Sendable {
         case ["-c"], ["--commit"]: .commit
         case ["--hook"]: .installHook
         case ["doctor"]: .doctor
+        case ["update"]: .update(force: false)
+        case ["update", "--force"]: .update(force: true)
         case ["-h"], ["--help"]: .help
         default: nil
         }
@@ -27,6 +29,7 @@ public let usage = """
       fm-code -c         show the message, then commit after you confirm
       fm-code --hook     install a prepare-commit-msg hook (prefills `git commit`)
       fm-code doctor     check your setup and see what's enabled
+      fm-code update     rebuild and reinstall from the latest version on GitHub
 
     Set FM_CODE_NO_RTK=1 to stop using rtk for compact git output.
     \(doctorHint)
@@ -59,6 +62,7 @@ public func describe(_ error: any Error) -> ErrorReport {
     switch error {
     case let e as CLIError: ErrorReport(message: e.description, hint: false)
     case let e as GeneratorError: ErrorReport(message: e.description, hint: true)
+    case let e as UpdateError: ErrorReport(message: e.description, hint: false)
     case let e as GitError: ErrorReport(message: "git: \(e.description)", hint: false)
     case let e as LanguageModelSession.ToolCallError: describe(e.underlyingError)
     case let e as LanguageModelSession.GenerationError:
