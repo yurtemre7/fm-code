@@ -13,8 +13,10 @@ struct ProcessResult {
     var stderr: String
 }
 
-/// Runs an executable with an argv array (no shell). Drains pipes concurrently
-/// before waiting so large outputs can't deadlock.
+/// Runs an executable with an argv array (no shell). Drains stdout and stderr
+/// concurrently before waiting so large outputs can't deadlock. stderr is read on
+/// a dedicated Thread, not GCD: callers may block every cooperative-pool thread,
+/// which starves GCD's default queue.
 func runProcess(_ exe: URL, _ args: [String], in dir: URL? = nil) throws -> ProcessResult {
     let p = Process()
     p.executableURL = exe
@@ -27,14 +29,13 @@ func runProcess(_ exe: URL, _ args: [String], in dir: URL? = nil) throws -> Proc
     try p.run()
 
     nonisolated(unsafe) var errData = Data()
-    let group = DispatchGroup()
-    group.enter()
-    DispatchQueue.global().async {
+    let done = DispatchSemaphore(value: 0)
+    Thread {
         errData = err.fileHandleForReading.readDataToEndOfFile()
-        group.leave()
-    }
+        done.signal()
+    }.start()
     let outData = out.fileHandleForReading.readDataToEndOfFile()
-    group.wait()
+    done.wait()
     p.waitUntilExit()
     return ProcessResult(
         status: p.terminationStatus,

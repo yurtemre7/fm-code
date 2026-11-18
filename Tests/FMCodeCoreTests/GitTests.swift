@@ -30,6 +30,14 @@ import Testing
     #expect(try Git.run(ReadOnlyGitCommand.diff.args, in: repo).count > 100_000)
 }
 
+@Test(.timeLimit(.minutes(1)))
+func manyConcurrentRunsDoNotStarve() async throws {
+    try await withThrowingTaskGroup(of: Bool.self) { group in
+        for _ in 0..<64 { group.addTask { Git.succeeds(["--version"]) } }
+        for try await ok in group { #expect(ok) }
+    }
+}
+
 @Test func binaryDiffDoesNotCrash() throws {
     let repo = try makeTempRepo(stage: [:])
     try Data([0, 1, 2, 255, 254, 0]).write(to: repo.appending(path: "b.bin"))
