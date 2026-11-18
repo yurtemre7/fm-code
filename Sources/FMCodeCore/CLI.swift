@@ -2,7 +2,7 @@ import Foundation
 import FoundationModels
 
 public enum Command: Equatable, Sendable {
-    case print, commit, installHook, doctor, update(force: Bool), help
+    case print, commit, installHook, doctor, update(force: Bool), markInstalled(String), help
 
     public static func parse(_ args: [String]) -> Command? {
         switch args {
@@ -12,10 +12,18 @@ public enum Command: Equatable, Sendable {
         case ["doctor"]: .doctor
         case ["update"]: .update(force: false)
         case ["update", "--force"]: .update(force: true)
+        // Internal: install.sh records the commit it just installed.
+        case _ where args.count == 3 && args[0] == "update" && args[1] == "--mark-installed" && isCommitHash(args[2]):
+            .markInstalled(args[2])
         case ["-h"], ["--help"]: .help
         default: nil
         }
     }
+}
+
+/// A full or abbreviated git commit hash.
+func isCommitHash(_ s: String) -> Bool {
+    (7...40).contains(s.count) && s.allSatisfy(\.isHexDigit)
 }
 
 public let doctorHint = "Run 'fm-code doctor' to check your setup."

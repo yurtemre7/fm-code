@@ -61,3 +61,16 @@ private func makeUpstream() throws -> URL {
     }
     #expect(calls == 2)
 }
+
+@Test func updateSkipsCommitRecordedByInstallScript() throws {
+    let upstream = try makeUpstream()
+    let cache = try makeTempDir().appending(path: "cache")
+    let target = URL(fileURLWithPath: "/opt/a")
+    let head = try Git.run(["rev-parse", "HEAD"], in: upstream).trimmingCharacters(in: .whitespacesAndNewlines)
+    // Short hash, as older stamps stored it: still counts as current.
+    try recordInstalled(commit: String(head.prefix(7)), cache: cache, target: target)
+    var calls = 0
+    #expect(try update(cache: cache, repo: upstream.path, target: target, install: { _ in calls += 1 }) == .upToDate(String(head.prefix(7))))
+    #expect(calls == 0)
+    #expect(installedCommit(cache: cache, target: URL(fileURLWithPath: "/opt/b")) == nil)
+}

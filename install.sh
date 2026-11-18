@@ -19,6 +19,11 @@ else
 fi
 echo "Installed $INSTALL_DIR/fm-code"
 
+# From a clean git checkout, remember the installed commit so `fm-code update` knows it's current.
+if commit=$(git rev-parse HEAD 2>/dev/null) && [ -z "$(git status --porcelain 2>/dev/null)" ]; then
+    "$INSTALL_DIR/fm-code" update --mark-installed "$commit" 2>/dev/null || true
+fi
+
 case ":$PATH:" in
     *":$INSTALL_DIR:"*) ;;
     *) echo "Note: $INSTALL_DIR is not on your PATH — add it to use 'fm-code' directly." ;;

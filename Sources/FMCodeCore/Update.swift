@@ -27,9 +27,6 @@ public func update(
     cache: URL, repo: String, target: URL, force: Bool = false, install: (URL) throws -> Void
 ) throws -> UpdateResult {
     let src = cache.appending(path: "src")
-    // One stamp per install folder, so installing elsewhere doesn't mark this one current.
-    let key = target.standardizedFileURL.path.unicodeScalars.map { CharacterSet.alphanumerics.contains($0) ? String($0) : "_" }.joined()
-    let stamp = cache.appending(path: "installed-\(key)")
     if FileManager.default.fileExists(atPath: src.appending(path: ".git").path) {
         try Git.run(["fetch", "-q", "--depth", "1", repo, "main"], in: src)
         try Git.run(["reset", "-q", "--hard", "FETCH_HEAD"], in: src)
@@ -38,12 +35,35 @@ public func update(
         try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
         try Git.run(["clone", "-q", "--depth", "1", "--branch", "main", repo, src.path])
     }
-    let head = try Git.run(["rev-parse", "--short", "HEAD"], in: src).trimmingCharacters(in: .whitespacesAndNewlines)
-    let previous = (try? String(contentsOf: stamp, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines)
-    if previous == head && !force { return .upToDate(head) }
+    let head = try Git.run(["rev-parse", "HEAD"], in: src).trimmingCharacters(in: .whitespacesAndNewlines)
+    let previous = installedCommit(cache: cache, target: target)
+    // Prefix match: older stamps hold short hashes.
+    if let previous, head.hasPrefix(previous), !force { return .upToDate(short(head)) }
     try install(src)
-    try head.write(to: stamp, atomically: true, encoding: .utf8)
-    return .updated(from: previous, to: head)
+    try recordInstalled(commit: head, cache: cache, target: target)
+    return .updated(from: previous.map(short), to: short(head))
+}
+
+private func short(_ commit: String) -> String { String(commit.prefix(7)) }
+
+/// One stamp per install folder, so installing elsewhere doesn't mark this one current.
+private func stamp(cache: URL, target: URL) -> URL {
+    let key = target.standardizedFileURL.path.unicodeScalars
+        .map { CharacterSet.alphanumerics.contains($0) ? String($0) : "_" }.joined()
+    return cache.appending(path: "installed-\(key)")
+}
+
+func installedCommit(cache: URL, target: URL) -> String? {
+    let s = (try? String(contentsOf: stamp(cache: cache, target: target), encoding: .utf8))?
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    return s?.isEmpty == false ? s : nil
+}
+
+/// Remembers that `commit` is installed in `target`. Called by `update`, and by install.sh
+/// (through `fm-code update --mark-installed <commit>`) after installing from a clean checkout.
+public func recordInstalled(commit: String, cache: URL, target: URL) throws {
+    try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+    try commit.write(to: stamp(cache: cache, target: target), atomically: true, encoding: .utf8)
 }
 
 /// Runs `src/install.sh` with the terminal attached, installing into `dir`.

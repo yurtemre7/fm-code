@@ -41,6 +41,10 @@ do {
         case .updated(let from, let to): print("Updated \(from.map { "\($0) → " } ?? "to ")\(to).")
         }
 
+    case .markInstalled(let commit):
+        let me = Bundle.main.executableURL?.resolvingSymlinksInPath() ?? URL(fileURLWithPath: "/usr/local/bin/fm-code")
+        try recordInstalled(commit: commit, cache: updateCache(), target: me.deletingLastPathComponent())
+
     case .installHook:
         let me = Bundle.main.executableURL?.resolvingSymlinksInPath().path ?? "fm-code"
         let url = try installHook(in: cwd, fallback: me)
