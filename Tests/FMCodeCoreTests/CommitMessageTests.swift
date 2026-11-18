@@ -38,3 +38,18 @@ import Testing
 @Test func allElevenTypes() {
     #expect(CommitType.allCases.map(\.rawValue) == ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert"])
 }
+
+@Test func keepsLeadingAcronym() {
+    #expect(render(.init(type: .docs, scope: nil, subject: "README updates", breaking: false)) == "docs: README updates")
+    #expect(render(.init(type: .feat, scope: nil, subject: "API client retries", breaking: false)) == "feat: API client retries")
+    #expect(render(.init(type: .feat, scope: nil, subject: "Add parser", breaking: false)) == "feat: add parser")
+}
+
+@Test func stripsRepeatedTypePrefix() {
+    #expect(render(.init(type: .feat, scope: nil, subject: "feat: add parser", breaking: false)) == "feat: add parser")
+    #expect(render(.init(type: .fix, scope: "ui", subject: "Fix(ui)!: handle nil", breaking: false)) == "fix(ui): handle nil")
+}
+
+@Test func skipsBlankFirstLine() {
+    #expect(render(.init(type: .feat, scope: nil, subject: "   \nadd y", breaking: false)) == "feat: add y")
+}

@@ -48,3 +48,40 @@ struct Unexpected: Error {}
     #expect(try await tool.run(command: "push") == "refused: not allowed")
     #expect(try await tool.run(command: "status").contains("a.txt"))
 }
+
+@Test func gitToolSurvivesRepoWithoutCommits() async throws {
+    let repo = try makeTempRepo(stage: [:])
+    let tool = GitTool(cwd: repo, runner: ToolGitRunner(rtk: nil))
+    #expect(try await tool.run(command: "log").hasPrefix("git error:"))
+}
+
+@Test func gitToolRepeatCallIsNotResent() async throws {
+    let repo = try makeTempRepo(stage: ["a.txt": "hello\n"])
+    let tool = GitTool(cwd: repo, runner: ToolGitRunner(rtk: nil))
+    #expect(try await tool.run(command: "diff").contains("+hello"))
+    #expect(try await tool.run(command: "diff") == "(already shown above)")
+}
+
+@Test func gitToolEnforcesTotalBudget() async throws {
+    let repo = try makeTempRepo(stage: ["big.txt": String(repeating: "line\n", count: 5_000)])
+    let tool = GitTool(cwd: repo, runner: ToolGitRunner(rtk: nil), budget: 100)
+    let first = try await tool.run(command: "diff")
+    #expect(first.count <= 100 + "\n[truncated]".count)
+    #expect(try await tool.run(command: "status") == "(output budget used up — write the message now)")
+}
+
+@Test func finalizeRetriesEmptySubject() async throws {
+    let r = try await finalize(
+        draft: { .init(type: .feat, scope: nil, subject: "  ", breaking: false) },
+        retry: { _ in .init(type: .feat, scope: nil, subject: "add y", breaking: false) })
+    #expect(r == "feat: add y")
+}
+
+@Test func finalizeKeepsFirstDraftWhenRetryFails() async throws {
+    let long = String(repeating: "word ", count: 20)
+    let r = try await finalize(
+        draft: { .init(type: .feat, scope: nil, subject: long, breaking: false) },
+        retry: { _ in throw Unexpected() })
+    #expect(r.hasPrefix("feat: word"))
+    #expect(r.count <= 72)
+}

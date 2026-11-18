@@ -24,12 +24,18 @@ private func collapse(_ s: Substring) -> String {
     s.split(whereSeparator: \.isWhitespace).joined(separator: " ")
 }
 
+/// Matches a type prefix the model repeated inside the subject, e.g. `Fix(ui)!: `.
+private var repeatedType: Regex<AnyRegexOutput> { try! Regex(
+    "^(?i:\(CommitType.allCases.map(\.rawValue).joined(separator: "|")))(\\([^)]*\\))?!?:\\s*") }
+
 func cleanSubject(_ raw: String) -> String {
-    let firstLine = raw.split(whereSeparator: \.isNewline).first.map(collapse) ?? ""
+    let firstLine = raw.split(whereSeparator: \.isNewline).map(collapse).first { !$0.isEmpty } ?? ""
     var s = firstLine
+    if let m = s.prefixMatch(of: repeatedType) { s = String(s[m.range.upperBound...]) }
     while s.hasSuffix(".") { s.removeLast() }
     s = s.trimmingCharacters(in: .whitespaces)
-    guard let first = s.first else { return s }
+    // Lowercase "Add" → "add", but keep acronyms/names like "README" or "API".
+    guard let first = s.first, s.dropFirst().first?.isUppercase != true else { return s }
     return first.lowercased() + s.dropFirst()
 }
 

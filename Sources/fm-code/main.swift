@@ -61,10 +61,7 @@ do {
             }
         }
     }
-} catch let error as CLIError {
-    fail(error.description)
-} catch let error as GeneratorError {
-    fail(error.description)
 } catch {
-    fail(String(describing: error))
+    let report = describe(error)
+    fail(report.message, hint: report.hint)
 }

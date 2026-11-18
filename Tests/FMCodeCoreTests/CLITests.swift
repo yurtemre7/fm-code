@@ -63,3 +63,9 @@ import Testing
     _ = try runProcess(hook, [msgFile.path], in: repo)
     #expect(try String(contentsOf: msgFile, encoding: .utf8).hasPrefix("feat: from hook\n"))
 }
+
+@Test func describesErrorsWithoutInternals() {
+    #expect(describe(CLIError.notARepo) == ErrorReport(message: "not a git repository", hint: false))
+    #expect(describe(GeneratorError.modelUnavailable("off")).hint)
+    #expect(describe(GitError.failed("boom")) == ErrorReport(message: "git: boom", hint: false))
+}

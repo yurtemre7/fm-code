@@ -18,21 +18,31 @@ struct CommitMessage {
 }
 
 public enum GeneratorError: Error, CustomStringConvertible {
-    case modelUnavailable(String)
+    case modelUnavailable(String), emptyMessage
     public var description: String {
-        switch self { case .modelUnavailable(let why): "on-device model unavailable: \(why)" }
+        switch self {
+        case .modelUnavailable(let why): "on-device model unavailable: \(why)"
+        case .emptyMessage: "the on-device model returned an empty message — try again"
+        }
     }
 }
 
-/// Uses the first draft if it fits; otherwise asks once for a shorter one, then force-fits.
+/// Uses the first draft if it fits and has a subject; otherwise asks once for a better one,
+/// then force-fits. If the retry itself fails, the first draft is force-fit instead.
 public func finalize(
     maxLength: Int = 72,
     draft: () async throws -> CommitDraft,
     retry: (Int) async throws -> CommitDraft
 ) async throws -> String {
-    let first = render(try await draft())
-    if first.count <= maxLength { return first }
-    return fit(try await retry(first.count), maxLength: maxLength)
+    let first = try await draft()
+    let rendered = render(first)
+    let empty = cleanSubject(first.subject).isEmpty
+    if rendered.count <= maxLength && !empty { return rendered }
+    guard let second = try? await retry(rendered.count) else {
+        if empty { throw GeneratorError.emptyMessage }
+        return fit(first, maxLength: maxLength)
+    }
+    return fit(second, maxLength: maxLength)
 }
 
 let instructions = """
@@ -61,7 +71,7 @@ public func generateCommitMessage(in dir: URL) async throws -> String {
         },
         retry: { length in
             try await session.respond(
-                to: "Too long (\(length) chars). Give a shorter subject, total ≤ 72 chars.",
+                to: "That message was \(length) chars or had an empty subject. Give a short, non-empty subject, total ≤ 72 chars.",
                 generating: CommitMessage.self
             ).content.draft
         }
