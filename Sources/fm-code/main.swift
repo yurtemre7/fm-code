@@ -25,7 +25,9 @@ do {
         print(usage)
 
     case .doctor:
-        fail("doctor is not implemented yet", hint: false)
+        let results = checks(.gather(cwd: cwd))
+        print(renderDoctor(results), terminator: "")
+        if results.contains(where: { $0.status == .fail }) { exit(1) }
 
     case .installHook:
         let me = Bundle.main.executableURL?.resolvingSymlinksInPath().path ?? "fm-code"
