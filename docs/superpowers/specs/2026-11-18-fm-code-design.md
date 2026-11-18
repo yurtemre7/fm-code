@@ -39,6 +39,11 @@ on Apple Silicon. Bare and fast: no chat, no config, no network.
   `diff --staged`, `diff --staged --stat`, `status --short`, `log --oneline -n 10`.
   Executed via `Process` (`/usr/bin/git`, argv array, no shell). Output truncated to a
   fixed character budget (~6000 chars) with a `[truncated]` marker.
+- **rtk (optional):** if `rtk` is found (on `PATH`, else `/opt/homebrew/bin`, `/usr/local/bin`
+  — hooks may run with a thin `PATH`), the GitTool runs `rtk git <args>` instead of
+  `git <args>` for further compacted output. If rtk exits non-zero, fall back to plain git.
+  `FM_CODE_NO_RTK=1` disables it. Only the model's tool calls use rtk; preflight, hook
+  install and `git commit` always use plain git (exit codes and exact output matter there).
 - **Output:** `@Generable struct CommitMessage { type, scope?, subject, breaking }`.
   `type` constrained to Conventional Commit types (feat, fix, docs, style, refactor, perf,
   test, build, ci, chore, revert). Swift renders `type(scope)!: subject`.
