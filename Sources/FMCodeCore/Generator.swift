@@ -25,22 +25,52 @@ public enum GeneratorError: Error, CustomStringConvertible {
     }
 }
 
-/// Uses the first draft if it fits and has a subject; otherwise asks once for a better one,
-/// then force-fits. If the retry itself fails, the first draft is force-fit instead.
+/// Uses the first draft if it fits, has a subject and isn't copied from `known`; otherwise
+/// asks once for a better one, then force-fits. If the retry itself fails, the first draft
+/// is force-fit instead.
 public func finalize(
     maxLength: Int = 72,
+    known: [String] = [],
     draft: () async throws -> CommitDraft,
-    retry: (Int) async throws -> CommitDraft
+    retry: (String) async throws -> CommitDraft
 ) async throws -> String {
     let first = try await draft()
     let rendered = render(first)
     let empty = cleanSubject(first.subject).isEmpty
-    if rendered.count <= maxLength && !empty { return rendered }
-    guard let second = try? await retry(rendered.count) else {
+    let problem: String? =
+        empty ? "That subject was empty. Give a short, non-empty subject, total ≤ 72 chars."
+        : isCopy(first.subject, of: known)
+            ? "That subject was copied from a commit message that already appears in the diff or log. "
+                + "Describe what the staged diff itself changes, in your own words, total ≤ 72 chars."
+        : rendered.count > maxLength
+            ? "That message was \(rendered.count) chars. Give a shorter subject, total ≤ 72 chars."
+        : nil
+    guard let problem else { return rendered }
+    guard let second = try? await retry(problem) else {
         if empty { throw GeneratorError.emptyMessage }
         return fit(first, maxLength: maxLength)
     }
     return fit(second, maxLength: maxLength)
+}
+
+/// Matches a commit header anywhere in a line, e.g. `+feat: add x` in a diff or `1a2b3c fix(ui): y` in a log.
+private var commitHeader: Regex<AnyRegexOutput> { try! Regex(
+    "(?i:\\b(?:\(CommitType.allCases.map(\.rawValue).joined(separator: "|")))(?:\\([^)]*\\))?!?:\\s+([^`'\"]+))") }
+
+/// Subjects of commit messages already present in `text` (diff content, log), normalized.
+/// Only subjects of 3+ words count, so short phrases can't cause false positives.
+func knownSubjects(in text: String) -> [String] {
+    text.split(whereSeparator: \.isNewline).compactMap { line in
+        guard let m = line.firstMatch(of: commitHeader), let raw = m.output[1].substring else { return nil }
+        let s = cleanSubject(String(raw).trimmingCharacters(in: CharacterSet(charactersIn: "`'\" "))).lowercased()
+        return s.split(separator: " ").count >= 3 ? s : nil
+    }
+}
+
+/// True when the subject is one of `known`, or one of them plus extra words (e.g. "… to README.md").
+func isCopy(_ subject: String, of known: [String]) -> Bool {
+    let s = cleanSubject(subject).lowercased()
+    return known.contains { s == $0 || s.hasPrefix($0 + " ") }
 }
 
 let instructions = """
@@ -74,15 +104,19 @@ public func generateCommitMessage(in dir: URL) async throws -> String {
         tools: [GitTool(cwd: dir, runner: ToolGitRunner(rtk: findRTK()))],
         instructions: instructions
     )
+    let context = ["diff", "log"].compactMap { cmd in
+        ReadOnlyGitCommand(rawValue: cmd).flatMap { try? Git.run($0.args, in: dir) }
+    }.joined(separator: "\n")
     return try await finalize(
+        known: knownSubjects(in: context),
         draft: {
             try await session.respond(to: "Write the commit message for the staged changes.", generating: CommitMessage.self).content.draft
         },
-        retry: { length in
-            try await session.respond(
-                to: "That message was \(length) chars or had an empty subject. Give a short, non-empty subject, total ≤ 72 chars.",
-                generating: CommitMessage.self
-            ).content.draft
+        retry: { problem in
+            if ProcessInfo.processInfo.environment["FM_CODE_DEBUG"] == "1" {
+                FileHandle.standardError.write(Data("→ retry: \(problem)\n".utf8))
+            }
+            return try await session.respond(to: problem, generating: CommitMessage.self).content.draft
         }
     )
 }

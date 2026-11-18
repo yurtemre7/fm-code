@@ -15,13 +15,13 @@ struct Unexpected: Error {}
 
 @Test func finalizeRetriesOnceThenFits() async throws {
     var calls = 0
-    var reportedLength = 0
+    var problem = ""
     let long = String(repeating: "a ", count: 50)
     let r = try await finalize(
         draft: { .init(type: .feat, subject: long, breaking: false) },
-        retry: { n in calls += 1; reportedLength = n; return .init(type: .feat, subject: long, breaking: false) })
+        retry: { p in calls += 1; problem = p; return .init(type: .feat, subject: long, breaking: false) })
     #expect(calls == 1)
-    #expect(reportedLength > 72)
+    #expect(problem.contains("chars"))
     #expect(r.count <= 72)
 }
 
@@ -84,4 +84,37 @@ struct Unexpected: Error {}
         retry: { _ in throw Unexpected() })
     #expect(r.hasPrefix("feat: word"))
     #expect(r.count <= 72)
+}
+
+@Test func knownSubjectsFindsCommitLinesInDiffAndLog() {
+    let text = """
+        -feat(parser): add fenced code block support
+        +feat: add fenced code block support
+        +see `fix: handle nil widget state` below
+        728fc38 feat: drop scopes and match style
+        +fix: typo
+        +let x = 1
+        """
+    #expect(knownSubjects(in: text) == [
+        "add fenced code block support", "add fenced code block support",
+        "handle nil widget state", "drop scopes and match style",
+    ])
+}
+
+@Test func isCopyCatchesExtendedCopies() {
+    let known = ["add fenced code block support"]
+    #expect(isCopy("Add fenced code block support to README.md", of: known))
+    #expect(isCopy("add fenced code block support", of: known))
+    #expect(!isCopy("add fenced code block supporting", of: known))
+    #expect(!isCopy("drop scopes from commit messages", of: known))
+}
+
+@Test func finalizeRetriesCopiedSubject() async throws {
+    var problem = ""
+    let r = try await finalize(
+        known: ["add fenced code block support"],
+        draft: { .init(type: .feat, subject: "add fenced code block support to README.md", breaking: false) },
+        retry: { p in problem = p; return .init(type: .refactor, subject: "drop scopes from commit messages", breaking: false) })
+    #expect(problem.contains("copied"))
+    #expect(r == "refactor: drop scopes from commit messages")
 }
