@@ -7,7 +7,7 @@ struct CommitMessage {
     var type: String
     @Guide(description: "Optional short scope, one lowercase word such as a module or area")
     var scope: String?
-    @Guide(description: "Imperative, lowercase summary of the change, no trailing period, under 50 characters")
+    @Guide(description: "Imperative summary naming what changed (verb + object, 3 to 8 words), lowercase, no trailing period")
     var subject: String
     @Guide(description: "True only if the change breaks backwards compatibility")
     var breaking: Bool
@@ -37,8 +37,12 @@ public func finalize(
 
 let instructions = """
     You write a single-line Conventional Commit message for the staged changes in a git repository.
-    Use the git tool to look at the changes: start with diffStat, then diff. Use log to match the repo's style.
-    Describe what the change does, in imperative mood. No body, no explanation.
+    Use the git tool in this order: log (only to see the repo's style), then diffStat, then diff.
+    Never reuse or copy a previous commit subject; describe only what the staged diff changes.
+    Pick the type from the diff: feat for new functionality, fix for bug fixes, docs for documentation only,
+    test for tests only, refactor for restructuring without behavior change, chore for tooling or maintenance.
+    The subject is imperative and names what changed, shaped like "add <what> to <where>" or "fix <problem> in <where>",
+    with the placeholders filled from the file names and code in the diff. No body, no explanation.
     """
 
 public func generateCommitMessage(in dir: URL) async throws -> String {

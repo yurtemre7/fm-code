@@ -31,6 +31,9 @@ struct GitTool: Tool {
     func run(command: String) async throws -> String {
         guard let cmd = ReadOnlyGitCommand(rawValue: command) else { return "refused: not allowed" }
         let out = try runner.run(cmd, in: cwd)
+        if ProcessInfo.processInfo.environment["FM_CODE_DEBUG"] == "1" {
+            FileHandle.standardError.write(Data("→ \(runner.rtk == nil ? "" : "rtk ")git \(cmd.args.joined(separator: " ")) (\(out.count) chars)\n".utf8))
+        }
         return out.isEmpty ? "(no output)" : truncate(out)
     }
 }
