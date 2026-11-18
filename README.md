@@ -19,9 +19,19 @@ feat(parser): add fenced code block support
 ## Install
 
 ```sh
-swift build -c release
-cp .build/release/fm-code /usr/local/bin/   # or anywhere on your PATH
+./install.sh
 ```
+
+This builds a release binary, copies it to `/usr/local/bin` (it asks for `sudo` only if that
+folder isn't writable), and runs `fm-code doctor` so you can see your setup right away.
+To install somewhere else:
+
+```sh
+INSTALL_DIR=~/.local/bin ./install.sh
+```
+
+Re-run `./install.sh` after pulling changes to update. To do it by hand:
+`swift build -c release && cp .build/release/fm-code /usr/local/bin/`.
 
 Open `Package.swift` in Xcode to build, run and debug.
 

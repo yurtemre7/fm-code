@@ -1,0 +1,28 @@
+#!/bin/sh
+# Builds fm-code in release mode and installs it.
+# Usage: ./install.sh            installs to /usr/local/bin
+#        INSTALL_DIR=~/bin ./install.sh
+set -eu
+
+INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
+cd "$(dirname "$0")"
+
+echo "Building fm-code (release)..."
+swift build -c release
+
+mkdir -p "$INSTALL_DIR" 2>/dev/null || sudo mkdir -p "$INSTALL_DIR"
+if [ -w "$INSTALL_DIR" ]; then
+    cp .build/release/fm-code "$INSTALL_DIR/fm-code"
+else
+    echo "Installing to $INSTALL_DIR needs sudo."
+    sudo cp .build/release/fm-code "$INSTALL_DIR/fm-code"
+fi
+echo "Installed $INSTALL_DIR/fm-code"
+
+case ":$PATH:" in
+    *":$INSTALL_DIR:"*) ;;
+    *) echo "Note: $INSTALL_DIR is not on your PATH — add it to use 'fm-code' directly." ;;
+esac
+
+echo
+"$INSTALL_DIR/fm-code" doctor || true
